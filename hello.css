@@ -1,1 +1,10 @@
 /* CSS declarations go here */
+.error {
+    border: 1px solid #C0C0C0;
+    padding: 5px;
+    background: #F0F0F0;
+}
+
+.error .header {
+    color: red;
+}
