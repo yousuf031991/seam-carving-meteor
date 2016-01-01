@@ -10,7 +10,6 @@
     <div>
         <input type="file" id="file">
     </div>
-    <img src="/pic_the_scream.jpg">
     <canvas id="myCanvas" style="border:1px solid #000000;">
     </canvas>
     <canvas id="yourCanvas" style="border:1px solid #000000;">
@@ -18,7 +17,7 @@
     <div id="options">
         <input type="radio" name="dimension" value="width"> Reduce width<br>
         <input type="radio" name="dimension" value="height"> Reduce height<br>
-        Reduce by amount:<input type="number" name="quantity" id="amount"><br>
+        Reduce by amount:<input type="number" name="quantity" min="1" id="amount"><br>
         <div class="error" hidden="true" id="errorMessageDim">
             <div class="header">
                 Please check one dimension- height or width.
@@ -29,11 +28,13 @@
                 Please select an amount.
             </div>
         </div>
+        <!--TODO: remove this -->
         <div class="error" hidden="true" id="errorMessageImage">
             <div class="header">
                 Please upload an image.
             </div>
         </div>
+        <!--end todo-->
         <input type="button" id="carve-button" value="Submit">
     </div>
 </template>
