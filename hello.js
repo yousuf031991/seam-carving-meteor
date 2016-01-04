@@ -67,11 +67,18 @@ if (Meteor.isClient) {
             }
             $("#errorMessageAmount").hide();
             var imageData = ctx.getImageData(0, 0, canvas1.width, canvas1.height);
-            console.log(imageData);
             var canvasSobel = document.getElementById('yourCanvas');
+            canvasSobel.height = canvas1.height;
+            canvasSobel.width = canvas1.width;
             var contextSobel = canvasSobel.getContext("2d");
-            var energyImageData = calcEnergy(imageData);
-            contextSobel.putImageData(energyImageData, 0, 0);
+            var energyArr = calcEnergy(imageData);
+            if (dim == 'height') {
+                //transpose if height reduction
+                energyArr = _.zip.apply(_, energyArr);
+            }
+
+            var seam = findSeam(energyArr);
+            //contextSobel.putImageData(energyImageData, 0, 0);
         }
     });
 
@@ -91,12 +98,14 @@ if (Meteor.isClient) {
 
     function calcEnergy(imageData) {
         var energy = [];
+        var energyArr = [];
+        var rowEnergy = [];
         var h = imageData.height;
         var w = imageData.width;
         var data = imageData.data;
-        var count = 0;
         var i, j, lastrow, nextrow, lastcol, nextcol, current, rx, gx, bx, ry, gy, by, en, delx, dely;
         for (i = 0; i < h; i++) {
+            rowEnergy = [];
             for (j = 0; j < w; j++) {
                 current = (i * 4 * w) + (4 * j);
                 if (i == 0) {
@@ -128,17 +137,22 @@ if (Meteor.isClient) {
                 delx = rx + gx + bx;
                 dely = ry + gy + by;
                 en = delx + dely;
-                count = count + 1;
+                rowEnergy.push(en);
                 energy.push(en, en, en, 255);
             }
+            energyArr.push(rowEnergy);
         }
 
-        console.log(count);
-        console.log(energy);
-        return new ImageData(new Uint8ClampedArray(energy), w, h);
+        console.log(energyArr);
+        //console.log(new ImageData(new Uint8ClampedArray(energy), w, h));
+        return energyArr;
     }
 
-    loadImage('/pic_the_scream.jpg');
+    function findSeam(energyArr) {
+
+    }
+
+    loadImage('/gear.png');
 }
 
 
