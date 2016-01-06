@@ -72,13 +72,13 @@ if (Meteor.isClient) {
             canvasSobel.height = canvas1.height;
             canvasSobel.width = canvas1.width;
 
-            var contextSobel = canvasSobel.getContext("2d");
 
             var imageArr = imageData.data;
             var h = imageData.height;
             var w = imageData.width;
             var isWidth = true;
             var newImageData;
+            $("#loading").show();
             if (dim == 'height') {
                 //transpose if height reduction
                 //isWidth = false;
@@ -86,17 +86,19 @@ if (Meteor.isClient) {
                 canvasSobel.height = canvasSobel.height - amount;
 
 
-                contextSobel.putImageData(imageArr, 0, 0);
             }
             else {
                 canvasSobel.width = canvas1.width - amount;
                 for (var i = 0; i < amount; i++) {
                     var energyArr = calcEnergy(imageArr, h, w - i);
-                    var seamArr = findSeam(energyArr, h, w - 1);
-                    removeSeam(seamArr, imageArr);
+                    var seamSol = findSeam(energyArr, h, w - i);
+                    imageArr = removeSeam(seamSol, imageArr, h, w - i);
                 }
-                contextSobel.putImageData(imageArr, 0, 0);
             }
+            var contextSobel = canvasSobel.getContext("2d");
+            var newIamgeData = new ImageData(new Uint8ClampedArray(imageArr), canvasSobel.width, canvasSobel.height);
+            contextSobel.putImageData(newIamgeData, 0, 0);
+            $("#loading").hide();
             //var energyArr = calcEnergy(imageArr, h, w);
             //var seam = findSeam(energyArr);
             //contextSobel.putImageData(energyImageData, 0, 0);
@@ -117,6 +119,10 @@ if (Meteor.isClient) {
         }
     }
 
+    function pixelAt(row, width, col) {
+        return (row * 4 * width) + (4 * col);
+    }
+
     function calcEnergy(data, h, w) {
         var energy = [];
         var energyArr = [];
@@ -125,7 +131,7 @@ if (Meteor.isClient) {
         for (i = 0; i < h; i++) {
             rowEnergy = [];
             for (j = 0; j < w; j++) {
-                current = (i * 4 * w) + (4 * j);
+                current = pixelAt(i, w, j);
                 if (i == 0) {
                     lastrow = ((h - 1) * 4 * (w - 1)) + (4 * j);
                 } else {
@@ -160,8 +166,6 @@ if (Meteor.isClient) {
             }
             energyArr.push(rowEnergy);
         }
-
-        console.log(energyArr);
         //console.log(new ImageData(new Uint8ClampedArray(energy), w, h));
         return energyArr;
     }
@@ -175,6 +179,7 @@ if (Meteor.isClient) {
             dpRow.push(energyArr[0][i]);
             solRow.push(0);
         }
+        sol.push(solRow);
         dp.push(dpRow);
         var row = 1;
         var cur;
@@ -209,20 +214,59 @@ if (Meteor.isClient) {
                 solRow.push(-1);
             }
             dp.push(dpRow);
-            sol.push(solRow)
+            sol.push(solRow);
             row++;
         }
-        var seamSol = findSeamSol(dp, sol);
+        //console.log(dp);
+        //console.log(sol);
+        return findSeamSol(dp, sol, w, h);
     }
 
-    function findSeamSol(dp, sol) {
-        
-
+    function findSeamSol(dp, sol, w, h) {
+        var seamSol = [];
+        var lastPos = 0;
+        var row = h - 1;
+        var lastMin = dp[row][0];
+        for (var i = 1; i < w; i++) {
+            if (dp[row][i] < lastMin) {
+                lastMin = dp[row][i];
+                lastPos = i;
+            }
+        }
+        seamSol.push(lastPos);
+        while (row > 0) {
+            lastPos = lastPos + sol[row][lastPos];
+            seamSol.push(lastPos);
+            row--;
+        }
+        return seamSol;
     }
 
-    loadImage('/gear.png');
+    function removeSeam(seamSol, imageArr, h, w) {
+        var newImageArr = [];
+        var i;
+        //console.log(seamSol);
+        for (i = 0; i < h; i++) {
+            seamSol[i] = pixelAt(i, w, seamSol[i]);
+        }
+        //console.log(seamSol);
+        //console.log(imageArr);
+        i = 0;
+        var j = 0;
+        while (i < imageArr.length) {
+            if (j < h && i == seamSol[j]) {
+                i += 4;
+                j++;
+            } else {
+                newImageArr.push(imageArr[i]);
+                i++;
+            }
+        }
+        return newImageArr;
+    }
+
+    loadImage('/castle.jpg');
 }
-
 
 if (Meteor.isServer) {
     Meteor.startup(function () {
