@@ -2,60 +2,22 @@ if (Meteor.isClient) {
     // counter starts at 0
     //Session.setDefault('counter', 0);
 
-    Template.hello.helpers({
-        countAmount: function () {
-
-        }
-    });
+    //Template.hello.helpers({
+    //    countAmount: function () {
+    //
+    //    }
+    //});
 
     Template.hello.events({
         'change #file': function (event, template) {
             var url = window.URL.createObjectURL(event.target.files[0]);
             loadImage(url);
-
-            //var canvas1 = document.getElementById("myCanvas");
-            //var canvasSobel = document.getElementById('yourCanvas');
-            //var contextSobel = canvasSobel.getContext("2d");
-            //
-            //var image = new Image();
-            //image.src = url;
-            //image.onload = function () {
-            //    var w = image.width;
-            //    var h = image.height;
-            //    canvas1.width = w;
-            //    canvas1.height = h;
-            //    var horw = $('input[name="dimension"]:checked').val();
-            //    //var heightOrWidth = template.find("dimension").value;
-            //    console.log(horw);
-            //    //var amountElement = template.find("#amount");
-            //    //canvasSobel.width = w;
-            //    //canvasSobel.height = h;
-            //    ctx.drawImage(image, 0, 0);
-            //    //var imageData = ctx.getImageData(0, 0, w, h);
-            //    //var sobelImageData = Sobel(imageData);
-            //    //contextSobel.putImageData(sobelImageData, 0, 0);
-            //    var amountElement = template.find("#amount");
-            //    canvasSobel.width = w;
-            //    canvasSobel.height = h;
-            //    var ctx = canvas1.getContext("2d");
-            //    ctx.drawImage(image, 0, 0);
-            //    var imageData = ctx.getImageData(0, 0, w, h);
-            //    //var sobelImageData = Sobel(imageData);
-            //    //contextSobel.putImageData(sobelImageData, 0, 0);
-            //}
         },
         'click #carve-button': function (event, template) {
             var amount = $("#amount").val();
             var dim = $('input[name="dimension"]:checked').val();
             var canvas1 = document.getElementById("myCanvas");
             var ctx = canvas1.getContext("2d");
-            //console.log(canvas1.height);
-            //if (ctx == undefined) {
-            //    $("#errorMessageImage").show();
-            //    return false;
-            //}
-            //var imageData = ctx.getImageData(0, 0, ctx.width, ctx.height);
-            //$("#errorMessageImage").hide();
             if (dim == undefined) {
                 $("#errorMessageDim").show();
                 return false;
@@ -71,37 +33,27 @@ if (Meteor.isClient) {
             //to be changed to new h and w
             canvasSobel.height = canvas1.height;
             canvasSobel.width = canvas1.width;
-
-
             var imageArr = imageData.data;
             var h = imageData.height;
             var w = imageData.width;
             var isWidth = true;
             var newImageData;
-            $("#loading").show();
+            //$("#loading").show();
             if (dim == 'height') {
-                //transpose if height reduction
-                //isWidth = false;
-                //energyArr = _.zip.apply(_, energyArr);
                 canvasSobel.height = canvasSobel.height - amount;
-
-
+                imageArr = rotateImage(imageArr, h, w);
+                h = [w, w = h][0];
+                imageArr = seamDelOpns(imageArr, amount, h, w);
+                imageArr = rotateImage(imageArr, h, w - amount);
             }
             else {
                 canvasSobel.width = canvas1.width - amount;
-                for (var i = 0; i < amount; i++) {
-                    var energyArr = calcEnergy(imageArr, h, w - i);
-                    var seamSol = findSeam(energyArr, h, w - i);
-                    imageArr = removeSeam(seamSol, imageArr, h, w - i);
-                }
+                imageArr = seamDelOpns(imageArr, amount, h, w);
             }
             var contextSobel = canvasSobel.getContext("2d");
             var newIamgeData = new ImageData(new Uint8ClampedArray(imageArr), canvasSobel.width, canvasSobel.height);
             contextSobel.putImageData(newIamgeData, 0, 0);
-            $("#loading").hide();
-            //var energyArr = calcEnergy(imageArr, h, w);
-            //var seam = findSeam(energyArr);
-            //contextSobel.putImageData(energyImageData, 0, 0);
+            //$("#loading").hide();
         }
     });
 
@@ -117,6 +69,15 @@ if (Meteor.isClient) {
             var ctx = canvas1.getContext("2d");
             ctx.drawImage(image, 0, 0);
         }
+    }
+
+    function seamDelOpns(imageArr, amount, h, w) {
+        for (var i = 0; i < amount; i++) {
+            var energyArr = calcEnergy(imageArr, h, w - i);
+            var seamSol = findSeam(energyArr, h, w - i);
+            imageArr = removeVertSeam(seamSol, imageArr, h, w - i);
+        }
+        return imageArr;
     }
 
     function pixelAt(row, width, col) {
@@ -162,11 +123,9 @@ if (Meteor.isClient) {
                 dely = ry + gy + by;
                 en = delx + dely;
                 rowEnergy.push(en);
-                //energy.push(en, en, en, 255);
             }
             energyArr.push(rowEnergy);
         }
-        //console.log(new ImageData(new Uint8ClampedArray(energy), w, h));
         return energyArr;
     }
 
@@ -217,8 +176,6 @@ if (Meteor.isClient) {
             sol.push(solRow);
             row++;
         }
-        //console.log(dp);
-        //console.log(sol);
         return findSeamSol(dp, sol, w, h);
     }
 
@@ -242,15 +199,12 @@ if (Meteor.isClient) {
         return seamSol;
     }
 
-    function removeSeam(seamSol, imageArr, h, w) {
+    function removeVertSeam(seamSol, imageArr, h, w) {
         var newImageArr = [];
         var i;
-        //console.log(seamSol);
         for (i = 0; i < h; i++) {
             seamSol[i] = pixelAt(i, w, seamSol[i]);
         }
-        //console.log(seamSol);
-        //console.log(imageArr);
         i = 0;
         var j = 0;
         while (i < imageArr.length) {
@@ -263,6 +217,21 @@ if (Meteor.isClient) {
             }
         }
         return newImageArr;
+    }
+
+    function rotateImage(imageArr, h, w) {
+        var newImage = [];
+        var pos;
+        for (var i = 0; i < w; i++) {
+            for (var j = 0; j < h; j++) {
+                pos = pixelAt(j, w, i);
+                newImage.push(imageArr[pos]);
+                newImage.push(imageArr[1 + pos]);
+                newImage.push(imageArr[2 + pos]);
+                newImage.push(imageArr[3 + pos]);
+            }
+        }
+        return newImage;
     }
 
     loadImage('/castle.jpg');
