@@ -68,16 +68,37 @@ if (Meteor.isClient) {
             $("#errorMessageAmount").hide();
             var imageData = ctx.getImageData(0, 0, canvas1.width, canvas1.height);
             var canvasSobel = document.getElementById('yourCanvas');
+            //to be changed to new h and w
             canvasSobel.height = canvas1.height;
             canvasSobel.width = canvas1.width;
+
             var contextSobel = canvasSobel.getContext("2d");
-            var energyArr = calcEnergy(imageData);
+
+            var imageArr = imageData.data;
+            var h = imageData.height;
+            var w = imageData.width;
+            var isWidth = true;
+            var newImageData;
             if (dim == 'height') {
                 //transpose if height reduction
-                energyArr = _.zip.apply(_, energyArr);
-            }
+                //isWidth = false;
+                //energyArr = _.zip.apply(_, energyArr);
+                canvasSobel.height = canvasSobel.height - amount;
 
-            var seam = findSeam(energyArr);
+
+                contextSobel.putImageData(imageArr, 0, 0);
+            }
+            else {
+                canvasSobel.width = canvas1.width - amount;
+                for (var i = 0; i < amount; i++) {
+                    var energyArr = calcEnergy(imageArr, h, w - i);
+                    var seamArr = findSeam(energyArr, h, w - 1);
+                    removeSeam(seamArr, imageArr);
+                }
+                contextSobel.putImageData(imageArr, 0, 0);
+            }
+            //var energyArr = calcEnergy(imageArr, h, w);
+            //var seam = findSeam(energyArr);
             //contextSobel.putImageData(energyImageData, 0, 0);
         }
     });
@@ -96,13 +117,10 @@ if (Meteor.isClient) {
         }
     }
 
-    function calcEnergy(imageData) {
+    function calcEnergy(data, h, w) {
         var energy = [];
         var energyArr = [];
         var rowEnergy = [];
-        var h = imageData.height;
-        var w = imageData.width;
-        var data = imageData.data;
         var i, j, lastrow, nextrow, lastcol, nextcol, current, rx, gx, bx, ry, gy, by, en, delx, dely;
         for (i = 0; i < h; i++) {
             rowEnergy = [];
@@ -138,7 +156,7 @@ if (Meteor.isClient) {
                 dely = ry + gy + by;
                 en = delx + dely;
                 rowEnergy.push(en);
-                energy.push(en, en, en, 255);
+                //energy.push(en, en, en, 255);
             }
             energyArr.push(rowEnergy);
         }
@@ -148,7 +166,57 @@ if (Meteor.isClient) {
         return energyArr;
     }
 
-    function findSeam(energyArr) {
+    function findSeam(energyArr, h, w) {
+        var dp = [];
+        var dpRow = [];
+        var sol = [];
+        var solRow = [];
+        for (var i = 0; i < w; i++) {
+            dpRow.push(energyArr[0][i]);
+            solRow.push(0);
+        }
+        dp.push(dpRow);
+        var row = 1;
+        var cur;
+        while (row < h) {
+            dpRow = [];
+            solRow = [];
+            if (dp[row - 1][0] + energyArr[row][0] <= dp[row - 1][1] + energyArr[row][0]) {
+                dpRow.push(dp[row - 1][0] + energyArr[row][0]);
+                solRow.push(0);
+            } else {
+                dpRow.push(dp[row - 1][1] + energyArr[row][0]);
+                solRow.push(1);
+            }
+            for (var col = 1; col < w - 1; col++) {
+                cur = energyArr[row][col];
+                if (dp[row - 1][col] + cur <= dp[row - 1][col + 1] + cur && dp[row - 1][col] + cur <= dp[row - 1][col - 1] + cur) {
+                    dpRow.push(dp[row - 1][col] + cur);
+                    solRow.push(0);
+                } else if (dp[row - 1][col + 1] + cur <= dp[row - 1][col] + cur && dp[row - 1][col + 1] + cur <= dp[row - 1][col - 1] + cur) {
+                    dpRow.push(dp[row - 1][col + 1] + cur);
+                    solRow.push(1);
+                } else {
+                    dpRow.push(dp[row - 1][col - 1] + cur);
+                    solRow.push(-1);
+                }
+            }
+            if (dp[row - 1][w - 1] + energyArr[row][w - 1] <= dp[row - 1][w - 2] + energyArr[row][w - 1]) {
+                dpRow.push(dp[row - 1][w - 1] + energyArr[row][w - 1]);
+                solRow.push(0);
+            } else {
+                dpRow.push(dp[row - 1][w - 2] + energyArr[row][w - 1]);
+                solRow.push(-1);
+            }
+            dp.push(dpRow);
+            sol.push(solRow)
+            row++;
+        }
+        var seamSol = findSeamSol(dp, sol);
+    }
+
+    function findSeamSol(dp, sol) {
+        
 
     }
 
