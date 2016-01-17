@@ -16,9 +16,13 @@
     </canvas>
     <div id="options">
         <div id="loading" hidden="true"></div>
-        <input type="radio" name="dimension" value="width"> Reduce width<br>
+        <input type="radio" name="energy" value="dualGradient" checked="checked"> Use Dual Gradient energy<br>
+        <input type="radio" name="energy" value="sobel"> Use Sobel energy<br>
+        <br />
+        <input type="radio" name="dimension" value="width" checked="checked"> Reduce width<br>
         <input type="radio" name="dimension" value="height"> Reduce height<br>
-        Reduce by amount in pixels:<input type="number" name="quantity" min="1" id="amount"><br>
+        Reduce by amount in pixels:<input type="number" name="quantity" min="1" id="amount" value="20"><br>
+        <!--TODO: remove this -->
         <div class="error" hidden="true" id="errorMessageDim">
             <div class="header">
                 Please check one dimension- height or width.
@@ -29,7 +33,6 @@
                 Please select an amount.
             </div>
         </div>
-        <!--TODO: remove this -->
         <div class="error" hidden="true" id="errorMessageImage">
             <div class="header">
                 Please upload an image.

@@ -14,6 +14,10 @@ if (Meteor.isClient) {
             loadImage(url);
         },
         'click #carve-button': function (event, template) {
+            var isSobel = false;
+            if ($('input[name="energy"]:checked').val() == "sobel") {
+                isSobel = true;
+            }
             var amount = $("#amount").val();
             var dim = $('input[name="dimension"]:checked').val();
             var canvas1 = document.getElementById("myCanvas");
@@ -28,6 +32,7 @@ if (Meteor.isClient) {
                 return false;
             }
             $("#errorMessageAmount").hide();
+
             var imageData = ctx.getImageData(0, 0, canvas1.width, canvas1.height);
             var canvasSobel = document.getElementById('yourCanvas');
             //to be changed to new h and w
@@ -43,12 +48,12 @@ if (Meteor.isClient) {
                 canvasSobel.height = canvasSobel.height - amount;
                 imageArr = rotateImage(imageArr, h, w);
                 h = [w, w = h][0];
-                imageArr = seamDelOpns(imageArr, amount, h, w);
+                imageArr = seamDelOpns(imageArr, amount, h, w, isSobel);
                 imageArr = rotateImage(imageArr, h, w - amount);
             }
             else {
                 canvasSobel.width = canvas1.width - amount;
-                imageArr = seamDelOpns(imageArr, amount, h, w);
+                imageArr = seamDelOpns(imageArr, amount, h, w, isSobel);
             }
             var contextSobel = canvasSobel.getContext("2d");
             var newIamgeData = new ImageData(new Uint8ClampedArray(imageArr), canvasSobel.width, canvasSobel.height);
@@ -71,9 +76,13 @@ if (Meteor.isClient) {
         }
     }
 
-    function seamDelOpns(imageArr, amount, h, w) {
+    function seamDelOpns(imageArr, amount, h, w, isSobel) {
         for (var i = 0; i < amount; i++) {
-            var energyArr = calcEnergy(imageArr, h, w - i);
+            if (isSobel) {
+                var energyArr = calcEnergySobel(imageArr, h, w - i);
+            } else {
+                var energyArr = calcEnergy(imageArr, h, w - i);
+            }
             var seamSol = findSeam(energyArr, h, w - i);
             imageArr = removeVertSeam(seamSol, imageArr, h, w - i);
         }
@@ -82,6 +91,78 @@ if (Meteor.isClient) {
 
     function pixelAt(row, width, col) {
         return (row * 4 * width) + (4 * col);
+    }
+
+    function calcEnergySobel(data, h, w) {
+        var kernelX = [
+            [-1, 0, 1],
+            [-2, 0, 2],
+            [-1, 0, 1]
+        ];
+
+        var kernelY = [
+            [-1, -2, -1],
+            [0, 0, 0],
+            [1, 2, 1]
+        ];
+
+        var sobelData = [];
+        var grayscaleData = [];
+
+        function bindPixelAt(data) {
+            return function (x, y, i) {
+                i = i || 0;
+                return data[((w * y) + x) * 4 + i];
+            };
+        }
+
+        var pixelAt = bindPixelAt(data);
+        var x, y;
+
+        for (y = 0; y < h; y++) {
+            for (x = 0; x < w; x++) {
+                var r = pixelAt(x, y, 0);
+                var g = pixelAt(x, y, 1);
+                var b = pixelAt(x, y, 2);
+
+                var avg = (r + g + b) / 3;
+                grayscaleData.push(avg, avg, avg, 255);
+            }
+        }
+
+        pixelAt = bindPixelAt(grayscaleData);
+
+        for (y = 0; y < h; y++) {
+            for (x = 0; x < w; x++) {
+                var pixelX = (
+                    (kernelX[0][0] * pixelAt(x - 1, y - 1)) +
+                    (kernelX[0][1] * pixelAt(x, y - 1)) +
+                    (kernelX[0][2] * pixelAt(x + 1, y - 1)) +
+                    (kernelX[1][0] * pixelAt(x - 1, y)) +
+                    (kernelX[1][1] * pixelAt(x, y)) +
+                    (kernelX[1][2] * pixelAt(x + 1, y)) +
+                    (kernelX[2][0] * pixelAt(x - 1, y + 1)) +
+                    (kernelX[2][1] * pixelAt(x, y + 1)) +
+                    (kernelX[2][2] * pixelAt(x + 1, y + 1))
+                );
+
+                var pixelY = (
+                    (kernelY[0][0] * pixelAt(x - 1, y - 1)) +
+                    (kernelY[0][1] * pixelAt(x, y - 1)) +
+                    (kernelY[0][2] * pixelAt(x + 1, y - 1)) +
+                    (kernelY[1][0] * pixelAt(x - 1, y)) +
+                    (kernelY[1][1] * pixelAt(x, y)) +
+                    (kernelY[1][2] * pixelAt(x + 1, y)) +
+                    (kernelY[2][0] * pixelAt(x - 1, y + 1)) +
+                    (kernelY[2][1] * pixelAt(x, y + 1)) +
+                    (kernelY[2][2] * pixelAt(x + 1, y + 1))
+                );
+
+                var magnitude = Math.sqrt((pixelX * pixelX) + (pixelY * pixelY)) >> 0;
+                sobelData.push(magnitude);
+            }
+        }
+        return sobelData;
     }
 
     function calcEnergy(data, h, w) {
